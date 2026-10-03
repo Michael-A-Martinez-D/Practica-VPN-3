@@ -1,0 +1,92 @@
+//////////////////////////////ISP
+
+en
+conf t
+hostname ISP
+
+int e0/0
+ description Enlace hacia R1
+ ip address 14.10.1.1 255.255.255.252
+ no shutdown
+
+int e0/1
+ description Enlace hacia FGT
+ ip address 14.10.2.1 255.255.255.252
+ no shutdown
+
+do wr
+
+
+////////////////R1
+
+en
+conf t
+hostname R1
+
+ip route 0.0.0.0 0.0.0.0 14.10.1.1
+
+interf e0/0
+
+ip address 14.10.1.2 255.255.255.252
+ip nat outside
+
+no sh
+
+interface e0/1
+
+ip address 14.10.10.1 255.255.255.128
+ip nat inside
+
+no sh
+
+exit
+
+
+ip dhcp excluded-address 14.10.10.1 
+
+ip dhcp pool VLAN10
+network 14.10.10.0 255.255.255.128
+default-router 14.10.10.1
+exit
+
+ip nat inside source list 1 interface e0/0 overload
+access-list 1 permit 14.10.10.0 0.0.0.127
+
+
+do wr
+
+
+/////////////////////Ubuntu desktop
+
+sudo nano start.sh
+sudo dhclient eth1
+ip a
+
+sudo apt update
+sudo apt install openfortivpn -y
+
+sudo ip route del default via 192.168.189.2 dev eth2
+sudo ip route add default via 14.10.10.1 dev eth1
+
+curl -k https://14.10.2.2
+
+sudo openfortivpn 14.10.2.2:10443 -u usuario1 -p Toybot17 --cipher=DEFAULT:@SECLEVEL=1 --trusted-cert=286efc05555bc05560acbbb14928b35b93b7da0e6a47e1a6701bc983704f1190
+
+
+//////////////WEB SERVER
+
+apt update
+
+apt install apache2
+apt start apache2
+
+#Permitir loggin como root
+sudo nano /etc/ssh/sshd_config
+
+#Descomentar PermitRootLoggin y poner: PermitRootLoggin yes
+
+
+
+apt install openssh-server -y
+service ssh start
+service ssh status
